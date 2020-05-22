@@ -7,5 +7,9 @@ Raspberry Pi based system to modify frame-rate and play videos based on motion d
 
 ## Software Prerequisites
 Install the github repo in /home/pi folder.
+
 Run one of "cv2Pi3Install.sh" or "cv2Pi4Install.sh" from inside codes folder - based on which Pi you use.
+
 Enable camera in your Raspberry Pi Configuration -- Interfaces.
+
+To run the script go to codes folder and run: "python3 motionBasedVideoPlayer.py" from commandline
