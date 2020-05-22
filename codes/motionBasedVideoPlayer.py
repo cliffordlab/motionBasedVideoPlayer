@@ -32,6 +32,7 @@ from picamera import PiCamera
 from time import time,sleep
 import numpy as np
 import cv2
+import os
 
 
 
@@ -138,6 +139,14 @@ class VideoPlayer:
             #sleep(poll_time)
 
 if __name__ == "__main__":
+    
+    try:
+        os.mkdir('/home/pi/motionBasedVideoPlayer/data/picameraVideos')
+    except OSError as exc:
+        if exc.errno != errno.EEXIST:
+            raise
+        pass
+    
     
     videoFile = '/home/pi/motionBasedVideoPlayer/data/displayVideos/test.mp4'
     cap = cv2.VideoCapture(videoFile)
