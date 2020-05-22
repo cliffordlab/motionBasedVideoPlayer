@@ -31,6 +31,7 @@ from picamera.array import PiRGBArray
 from picamera import PiCamera
 from time import time,sleep
 import numpy as np
+import errno
 import cv2
 import os
 
