@@ -32,6 +32,7 @@ from picamera import PiCamera
 from time import time,sleep
 import numpy as np
 import errno
+import sys
 import cv2
 import os
 
@@ -78,9 +79,7 @@ class VideoPlayer:
             printf("Video object is not open...")
             return
         
-        # Clone the video-object to be re-used in the future
-        capArchive = cap
-        
+        idx = 1
         for frame in self.camera.capture_continuous(self.rawCapture,
                                 format="bgr",
                                 use_video_port=True):
@@ -90,8 +89,6 @@ class VideoPlayer:
             #frameg = frame[:,:,1] # Ignore Green channel
             #framer = frame[:,:,2] # Ignore Red channel
             framegs = cv2.cvtColor(frame,cv2.COLOR_BGR2GRAY) # Extract Grayscale channel
-
-            #frameDiff = np.array(np.absolute(np.array(frame, dtype=int) - np.array(frameOld, dtype=int)), dtype=np.uint8) # Old way of doing things.
             
             # Take the difference (frameDiff) between current frame (framegs) and the previous frame (frameOld)
             frameDiff = np.array(np.absolute(np.array(framegs, dtype=int) - np.array(frameOld, dtype=int)), dtype=np.uint8)
@@ -106,34 +103,70 @@ class VideoPlayer:
             
             # Modify below line to specify how many frames to skip based on the above motion signals.
             # I round the motionSignalScaled value and bound it within 1 and 50
-            print(int(motionSignalScaled))
+            #print(int(motionSignalScaled))
             nFrameSkip = min(int(motionSignalScaled), 200)
             nFrameSkip = max(1, nFrameSkip)
-            if (nFrameSkip > 15):
-                nFrameSkip = 100
-            else:
-                nFrameSkip = 0
-
+            # Uncomment below to Binarize nFrameSkip
+            #if (nFrameSkip > 15):
+            #    nFrameSkip = 100
+            #else:
+            #    nFrameSkip = 0
+            
+            idx = idx + nFrameSkip
                 
             # If display video has ended, then restart
             if (not cap.isOpened()):
                 cap.release()
                 # Copy the cloned archive back to the original variable
-                cap = capArchive
+                return
                 
             # Skip Video frames
-            for ii in range(int(nFrameSkip)):
-                ret, dispFrame = cap.read()
-                
-            #Show Video frame
+            # Method 1: Very slow on RasPi
+            #for ii in range(int(nFrameSkip)):
+            #    ret, dispFrame = cap.read()
+            
+            # Method 2: Seek idx^th frame
+            cap.set(cv2.CAP_PROP_POS_FRAMES, idx)
+            
+            # If video has ended return
+            if (not cap.isOpened()):
+                cap.release()
+                cv2.destroyAllWindows()
+                self.camera.stop_recording()
+                return
+            
+            # Skip nFrameSkip frames 
             ret, dispFrame = cap.read()
-            cv2.imshow('frame',dispFrame)
+            idx = idx + 1
+            
+            # If video has ended return
+            if (not cap.isOpened()):
+                cap.release()
+                cv2.destroyAllWindows()
+                self.camera.stop_recording()
+                return
+            
+            # Get next frame
+            ret, dispFrame = cap.read()
+            idx = idx + 1
+            
+            # Show Video frame 
+            try:
+                cv2.imshow('frame',dispFrame)
+            except:
+                # If video has ended return
+                cap.release()
+                cv2.destroyAllWindows()
+                self.camera.stop_recording()
+                return
+            
+            # Routine to exit 
             k = cv2.waitKey(30) & 0xff
             if k == 27:
                 print("Video Stream stops. Press Ctrl+C now.")
                 cv2.destroyAllWindows()
                 self.camera.stop_recording()
-                return
+                sys.exit("Ctrl-C was pressed")
 
             self.rawCapture.truncate(0)
             # Optionally sleep for poll_time seconds
@@ -149,9 +182,9 @@ if __name__ == "__main__":
         pass
     
     
-    videoFile = '/home/pi/motionBasedVideoPlayer/data/displayVideos/test.mp4'
-    cap = cv2.VideoCapture(videoFile)
+    videoFile = '/home/pi/motionBasedVideoPlayer/data/displayVideos/test.mp4' 
     
-    vidPlayer = VideoPlayer()
-    
-    vidPlayer.motionDetector(poll_time = 0, cap = cap)
+    while True:
+        vidPlayer = VideoPlayer()
+        cap = cv2.VideoCapture(videoFile)
+        vidPlayer.motionDetector(poll_time = 0, cap = cap)
